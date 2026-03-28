@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SPACE IMPACT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: #000;
+            image-rendering: pixelated;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            pointer-events: auto;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        h1 {
+            font-size: 32px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px #fff, 0 0 40px #fff;
+            animation: flicker 2s infinite;
+        }
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .nokia-text {
+            font-size: 14px;
+            color: #aaa;
+            text-align: center;
+            line-height: 1.8;
+            max-width: 300px;
+            margin: 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .btn {
+            background: transparent;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 18px 50px;
+            font-size: 16px;
+            font-family: inherit;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin: 12px;
+            pointer-events: auto;
+            letter-spacing: 3px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+        
+        .btn:hover, .btn:active {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 30px rgba(255,255,255,0.8);
+        }
+        
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 0 10px #fff;
+            letter-spacing: 2px;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+            pointer-events: auto;
+        }
+        
+        .control-area {
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+        
+        .control-area:active {
+            background: rgba(255,255,255,0.2);
+            border-color: #fff;
+            box-shadow: 0 0 30px rgba(255,255,255,0.5);
+        }
+        
+        .control-label {
+            font-size: 11px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        #bossWarning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            animation: blink 0.3s infinite;
+            display: none;
+            text-shadow: 0 0 20px #fff;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; text-shadow: 0 0 20px #fff; }
+            51%, 100% { opacity: 0.3; text-shadow: 0 0 5px #fff; }
+        }
+        
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(255,255,255,0.02) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="scanline"></div>
+    
+    <div id="ui">
+        <!-- Ana Menü -->
+        <div id="menuScreen" class="screen">
+            <h1>★ SPACE IMPACT ★</h1>
+            <div class="nokia-text">
+                NOKIA 3310 EDITION<br><br>
+                Düşman uzay gemilerini yok et<br>
+                Boss'ları yen<br>
+                Galaksiyi koru<br><br>
+                Seviye: <span id="menuLevel">1</span>
+            </div>
+            <button class="btn" onclick="game.start()">BAŞLA</button>
+            <button class="btn" onclick="game.showHelp()">YARDIM</button>
+        </div>
+        
+        <!-- Yardım -->
+        <div id="helpScreen" class="screen hidden">
+            <h1>KONTROLLER</h1>
+            <div class="nokia-text">
+                SOL BUTON: Hareket<br>
+                SAĞ BUTON: Ateş<br><br>
+                ▲ YUKARI / ▼ AŞAĞI<br><br>
+                👾 Düşman: 100-500 puan<br>
+                💎 Güçlendirme topla<br>
+                👑 Boss: 1000+ puan<br><br>
+                3 canın var!
+            </div>
+            <button class="btn" onclick="game.showMenu()">GERİ</button>
+        </div>
+        
+        <!-- Oyun Bitti -->
+        <div id="gameOverScreen" class="screen hidden">
+            <h1>OYUN BİTTİ</h1>
+            <div class="nokia-text">
+                SKOR: <span id="finalScore">0</span><br>
+                SEVİYE: <span id="finalLevel">1</span><br><br>
+                <span id="gameOverText">TEKRAR DENE!</span>
+            </div>
+            <button class="btn" onclick="game.restart()">YENİDEN BAŞLA</button>
+            <button class="btn" onclick="game.showMenu()">MENÜ</button>
+        </div>
+        
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <span>SKOR: <span id="score">0</span></span>
+            <span>♥ <span id="lives">3</span></span>
+            <span>LVL: <span id="level">1</span></span>
+        </div>
+        
+        <div id="bossWarning">⚠ BOSS YAKLAŞIYOR ⚠</div>
+        
+        <!-- Kontroller -->
+        <div id="controls" class="hidden">
+            <div class="control-area" id="moveBtn">
+                <span class="control-label">◄ HAREKET ►</span>
+            </div>
+            <div class="control-area" id="fireBtn">
+                <span class="control-label">● ATEŞ ●</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let game = {
+            state: 'menu',
+            score: 0,
+            lives: 3,
+            level: 1,
+            width: 0,
+            height: 0,
+            
+            player: {
+                x: 60,
+                y: 0,
+                width: 24,
+                height: 16,
+                speed: 4,
+                bullets: [],
+                shootTimer: 0,
+                powerLevel: 1,
+                invulnerable: 0
+            },
+            
+            enemies: [],
+            enemyBullets: [],
+            particles: [],
+            powerups: [],
+            stars: [],
+            
+            levelProgress: 0,
+            levelLength: 2500,
+            bossActive: false,
+            boss: null,
+            enemySpawnTimer: 0,
+            
+            moveActive: false,
+            fireActive: false,
+            moveY: 0
+        };
+        
+        function resize() {
+            game.width = window.innerWidth;
+            game.height = window.innerHeight;
+            canvas.width = game.width;
+            canvas.height = game.height;
+            game.player.y = game.height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        
+        function initStars() {
+            game.stars = [];
+            for (let i = 0; i < 80; i++) {
+                game.stars.push({
+                    x: Math.random() * game.width,
+                    y: Math.random() * game.height,
+                    speed: 0.3 + Math.random() * 2,
+                    size: Math.random() > 0.8 ? 3 : (Math.random() > 0.5 ? 2 : 1),
+                    brightness: Math.random()
+                });
+            }
+        }
+        
+        // Ses efektleri
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            switch(type) {
+                case 'shoot':
+                    osc.frequency.value = 1200;
+                    osc.type = 'square';
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.08);
+                    break;
+                case 'explosion':
+                    osc.frequency.value = 80;
+                    osc.type = 'sawtooth';
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                    break;
+                case 'powerup':
+                    osc.frequency.value = 800;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(1600, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                    break;
+                case 'hit':
+                    osc.frequency.value = 300;
+                    osc.type = 'square';
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                    break;
+            }
+        }
+        
+        // DETAYLI ÇİZİM FONKSİYONLARI
+        
+        function drawPixel(x, y, color = '#fff') {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+        }
+        
+        function drawRect(x, y, w, h, color = '#fff') {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
+        }
+        
+        // GELİŞMİŞ OYUNCU GEMİSİ
+        function drawPlayer() {
+            const p = game.player;
+            const x = Math.floor(p.x);
+            const y = Math.floor(p.y);
+            
+            // Yanıp sönme efekti (dokunulmazlık)
+            if (p.invulnerable > 0 && Math.floor(Date.now() / 50) % 2 === 0) return;
+            
+            // Ana gövde - füzyon reaktörü
+            drawRect(x, y - 6, 20, 12, '#fff');
+            drawRect(x + 2, y - 4, 16, 8, '#000');
+            drawRect(x + 4, y - 2, 12, 4, '#fff');
+            
+            // Burun konisi
+            drawRect(x + 20, y - 4, 6, 8, '#fff');
+            drawRect(x + 22, y - 2, 4, 4, '#000');
+            drawRect(x + 24, y - 1, 2, 2, '#fff');
+            
+            // Üst kanat
+            drawRect(x - 4, y - 10, 12, 4, '#fff');
+            drawRect(x - 2, y - 12, 8, 2, '#fff');
+            drawRect(x, y - 8, 8, 2, '#000');
+            
+            // Alt kanat
+            drawRect(x - 4, y + 6, 12, 4, '#fff');
+            drawRect(x - 2, y + 10, 8, 2, '#fff');
+            drawRect(x, y + 6, 8, 2, '#000');
+            
+            // Motorlar
+            drawRect(x - 8, y - 5, 4, 3, '#fff');
+            drawRect(x - 8, y + 2, 4, 3, '#fff');
+            
+            // Alev efekti (animasyonlu)
+            const flameOffset = Math.floor(Date.now() / 30) % 3;
+            drawRect(x - 12 - flameOffset, y - 4, 4 + flameOffset, 2, '#fff');
+            drawRect(x - 12 - flameOffset, y + 2, 4 + flameOffset, 2, '#fff');
+            drawRect(x - 10 - flameOffset, y - 3, 2, 1, '#aaa');
+            drawRect(x - 10 - flameOffset, y + 3, 2, 1, '#aaa');
+            
+            // Silahlar (güç seviyesine göre)
+            if (p.powerLevel >= 2) {
+                drawRect(x + 8, y - 12, 4, 2, '#fff');
+                drawRect(x + 8, y + 10, 4, 2, '#fff');
+            }
+        }
+        
+        // DETAYLI DÜŞMAN TİPLERİ
+        function drawEnemy(enemy) {
+            const x = Math.floor(enemy.x);
+            const y = Math.floor(enemy.y);
+            
+            switch(enemy.type) {
+                case 1: // SCOUT - Hafif keşif gemisi
+                    // Ana gövde (ok şeklinde)
+                    drawRect(x - 8, y - 3, 16, 6, '#fff');
+                    drawRect(x - 6, y - 5, 12, 2, '#fff');
+                    drawRect(x - 6, y + 3, 12, 2, '#fff');
+                    // Detaylar
+                    drawRect(x - 4, y - 1, 8, 2, '#000');
+                    drawRect(x + 2, y - 2, 4, 4, '#000');
+                    // Motor
+                    drawRect(x - 10, y - 1, 2, 2, '#fff');
+                    break;
+                    
+                case 2: // INTERCEPTOR - Hızlı avcı
+                    // Dar, uzun gövde
+                    drawRect(x - 10, y - 2, 20, 4, '#fff');
+                    // Kanatlar (ters ok)
+                    drawRect(x - 6, y - 8, 8, 3, '#fff');
+                    drawRect(x - 6, y + 5, 8, 3, '#fff');
+                    drawRect(x - 8, y - 6, 4, 2, '#fff');
+                    drawRect(x - 8, y + 4, 4, 2, '#fff');
+                    // Kokpit
+                    drawRect(x + 2, y - 1, 4, 2, '#000');
+                    // Motorlar
+                    drawRect(x - 12, y - 2, 2, 1, '#fff');
+                    drawRect(x - 12, y + 1, 2, 1, '#fff');
+                    break;
+                    
+                case 3: // BOMBER - Ağır bombardıman
+                    // Geniş gövde
+                    drawRect(x - 12, y - 8, 24, 16, '#fff');
+                    drawRect(x - 10, y - 6, 20, 12, '#000');
+                    // Üst taret
+                    drawRect(x - 4, y - 12, 8, 4, '#fff');
+                    drawRect(x - 2, y - 10, 4, 2, '#000');
+                    // Alt taret
+                    drawRect(x - 4, y + 8, 8, 4, '#fff');
+                    drawRect(x - 2, y + 8, 4, 2, '#000');
+                    // Yan kanatlar
+                    drawRect(x - 16, y - 4, 4, 8, '#fff');
+                    drawRect(x + 12, y - 4, 4, 8, '#fff');
+                    // Bombalar
+                    drawRect(x - 8, y + 10, 4, 3, '#fff');
+                    drawRect(x + 4, y + 10, 4, 3, '#fff');
+                    break;
+                    
+                case 4: // ELITE - Güçlü savaşçı
+                    // Simetrik kanatlar
+                    drawRect(x - 8, y - 2, 16, 4, '#fff');
+                    // Üst kanat
+                    drawRect(x - 6, y - 10, 12, 4, '#fff');
+                    drawRect(x - 4, y - 12, 8, 2, '#fff');
+                    drawRect(x - 2, y - 8, 4, 2, '#000');
+                    // Alt kanat
+                    drawRect(x - 6, y + 6, 12, 4, '#fff');
+                    drawRect(x - 4, y + 10, 8, 2, '#fff');
+                    drawRect(x - 2, y + 6, 4, 2, '#000');
+                    // Merkez
+                    drawRect(x - 2, y - 4, 8, 8, '#000');
+                    drawRect(x, y - 2, 4, 4, '#fff');
+                    // Silah
+                    drawRect(x - 12, y - 1, 4, 2, '#fff');
+                    break;
+                    
+                case 5: // STEALTH - Gizli gemi
+                    // Üçgen şekil
+                    for (let i = 0; i < 8; i++) {
+                        drawRect(x - 8 + i * 2, y - i, 2, i * 2, '#fff');
+                    }
+                    // Detay çizgiler
+                    drawRect(x - 4, y - 2, 8, 1, '#000');
+                    drawRect(x - 2, y, 4, 1, '#000');
+                    break;
+            }
+        }
+        
+        // DEVASA BOSS
+        function drawBoss() {
+            if (!game.boss) return;
+            const b = game.boss;
+            const x = Math.floor(b.x);
+            const y = Math.floor(b.y);
+            
+            // Ana gövde - kocaman zırhlı istila gemisi
+            drawRect(x - 40, y - 30, 80, 60, '#fff');
+            drawRect(x - 36, y - 26, 72, 52, '#000');
+            
+            // Üst kule
+            drawRect(x - 20, y - 45, 40, 15, '#fff');
+            drawRect(x - 16, y - 42, 32, 10, '#000');
+            drawRect(x - 8, y - 48, 16, 6, '#fff');
+            
+            // Alt kule
+            drawRect(x - 20, y + 30, 40, 15, '#fff');
+            drawRect(x - 16, y + 32, 32, 10, '#000');
+            drawRect(x - 8, y + 42, 16, 6, '#fff');
+            
+            // Yan kuleler
+            drawRect(x - 55, y - 20, 15, 40, '#fff');
+            drawRect(x - 52, y - 16, 10, 32, '#000');
+            drawRect(x - 60, y - 10, 8, 20, '#fff');
+            
+            drawRect(x + 40, y - 20, 15, 40, '#fff');
+            drawRect(x + 42, y - 16, 10, 32, '#000');
+            drawRect(x + 52, y - 10, 8, 20, '#fff');
+            
+            // Merkez çekirdek (zayıf nokta)
+            const pulse = Math.sin(Date.now() / 200) * 2;
+            drawRect(x - 12 + pulse, y - 12 + pulse, 24 - pulse*2, 24 - pulse*2, '#fff');
+            drawRect(x - 8, y - 8, 16, 16, '#000');
+            drawRect(x - 4, y - 4, 8, 8, '#fff');
+            
+            // Motorlar (animasyonlu)
+            const flame = Math.floor(Date.now() / 50) % 4;
+            for (let i = 0; i < 3; i++) {
+                const my = y - 20 + i * 20;
+                drawRect(x + 45 + flame, my - 3, 6 + flame, 6, '#fff');
+            }
+            
+            // Can barı
+            const barWidth = 100;
+            const healthPercent = b.health / b.maxHealth;
+            drawRect(x - 50, y - 55, barWidth, 8, '#000');
+            drawRect(x - 48, y - 53, 96 * healthPercent, 4, '#fff');
+            drawRect(x - 48 + 96 * healthPercent, y - 53, 96 * (1 - healthPercent), 4, '#333');
+        }
+        
+        // Güçlendirme çizimi
+        function drawPowerup(p) {
+            const x = Math.floor(p.x);
+            const y = Math.floor(p.y);
+            const bounce = Math.sin(Date.now() / 150) * 3;
+            
+            // Dış halka (dönen)
+            const angle = Date.now() / 500;
+            for (let i = 0; i < 8; i++) {
+                const px = x + Math.cos(angle + i * Math.PI / 4) * 10;
+                const py = y + bounce + Math.sin(angle + i * Math.PI / 4) * 10;
+                drawRect(px - 1, py - 1, 3, 3, '#fff');
+            }
+            
+            // İç kutu
+            drawRect(x - 8, y - 8 + bounce, 16, 16, '#fff');
+            drawRect(x - 6, y - 6 + bounce, 12, 12, '#000');
+            
+            if (p.type === 'health') {
+                // Kalp sembolü
+                drawRect(x - 2, y - 4 + bounce, 4, 3, '#fff');
+                drawRect(x - 4, y - 2 + bounce, 2, 2, '#fff');
+                drawRect(x + 2, y - 2 + bounce, 2, 2, '#fff');
+                drawRect(x - 2, y + 1 + bounce, 4, 2, '#fff');
+                drawRect(x - 1, y + 3 + bounce, 2, 1, '#fff');
+            } else if (p.type === 'weapon') {
+                // W sembolü
+                drawRect(x - 4, y - 4 + bounce, 2, 6, '#fff');
+                drawRect(x + 2, y - 4 + bounce, 2, 6, '#fff');
+                drawRect(x - 1, y - 1 + bounce, 2, 4, '#fff');
+                drawRect(x - 4, y + 2 + bounce, 2, 2, '#fff');
+                drawRect(x + 2, y + 2 + bounce, 2, 2, '#fff');
+            } else if (p.type === 'shield') {
+                // Kalkan
+                drawRect(x - 4, y - 4 + bounce, 8, 8, '#fff');
+                drawRect(x - 2, y - 2 + bounce, 4, 4, '#000');
+            }
+        }
+        
+        // Parçacık efekti
+        function createExplosion(x, y, size) {
+            for (let i = 0; i < size * 2; i++) {
+                const angle = (Math.PI * 2 * i) / (size * 2);
+                const speed = 2 + Math.random() * 6;
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 30 + Math.random() * 20,
+                    size: 2 + Math.random() * 4,
+                    type: Math.random() > 0.5 ? 'square' : 'pixel'
+                });
+            }
+            playSound('explosion');
+        }
+        
+        // Oyun fonksiyonları
+        game.start = function() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            
+            this.state = 'playing';
+            this.score = 0;
+            this.lives = 3;
+            this.level = 1;
+            this.resetLevel();
+            initStars();
+            this.updateHUD();
+            this.loop();
+        };
+        
+        game.resetLevel = function() {
+            this.player.x = 60;
+            this.player.y = this.height / 2;
+            this.player.bullets = [];
+            this.player.powerLevel = 1;
+            this.player.invulnerable = 0;
+            this.enemies = [];
+            this.enemyBullets = [];
+            this.particles = [];
+            this.powerups = [];
+            this.levelProgress = 0;
+            this.bossActive = false;
+            this.boss = null;
+            this.enemySpawnTimer = 0;
+            document.getElementById('bossWarning').style.display = 'none';
+        };
+        
+        game.showHelp = function() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('helpScreen').classList.remove('hidden');
+        };
+        
+        game.showMenu = function() {
+            document.getElementById('helpScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('controls').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('menuLevel').textContent = this.level;
+            this.state = 'menu';
+        };
+        
+        game.restart = function() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            this.start();
+        };
+        
+        game.gameOver = function() {
+            this.state = 'gameover';
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('finalLevel').textContent = this.level;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('controls').classList.add('hidden');
+        };
+        
+        game.updateHUD = function() {
+            document.getElementById('score').textContent = this.score;
+            document.getElementById('lives').textContent = '♥'.repeat(this.lives);
+            document.getElementById('level').textContent = this.level;
+        };
+        
+        // Ana oyun döngüsü
+        game.loop = function() {
+            if (this.state !== 'playing') return;
+            
+            // Temizle
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, this.width, this.height);
+            
+            // Yıldızlar
+            this.stars.forEach(star => {
+                star.x -= star.speed;
+                if (star.x < 0) {
+                    star.x = this.width;
+                    star.y = Math.random() * this.height;
+                }
+                const alpha = 0.3 + star.brightness * 0.7;
+                ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+            
+            // Oyuncu hareketi
+            if (this.moveActive) {
+                this.player.y += this.moveY * this.player.speed;
+                this.player.y = Math.max(30, Math.min(this.height - 30, this.player.y));
+            }
+            
+            // Ateş
+            if (this.fireActive && this.player.shootTimer <= 0) {
+                // Ana mermi
+                this.player.bullets.push({
+                    x: this.player.x + 20,
+                    y: this.player.y,
+                    speed: 10,
+                    damage: 1
+                });
+                
+                // Güçlendirilmiş mermiler
+                if (this.player.powerLevel >= 2) {
+                    this.player.bullets.push({
+                        x: this.player.x + 15,
+                        y: this.player.y - 8,
+                        speed: 9,
+                        damage: 1
+                    });
+                    this.player.bullets.push({
+                        x: this.player.x + 15,
+                        y: this.player.y + 8,
+                        speed: 9,
+                        damage: 1
+                    });
+                }
+                if (this.player.powerLevel >= 3) {
+                    this.player.bullets.push({
+                        x: this.player.x + 10,
+                        y: this.player.y - 12,
+                        speed: 8,
+                        damage: 1
+                    });
+                    this.player.bullets.push({
+                        x: this.player.x + 10,
+                        y: this.player.y + 12,
+                        speed: 8,
+                        damage: 1
+                    });
+                }
+                
+                this.player.shootTimer = 6;
+                playSound('shoot');
+            }
+            if (this.player.shootTimer > 0) this.player.shootTimer--;
+            if (this.player.invulnerable > 0) this.player.invulnerable--;
+            
+            // Mermiler
+            this.player.bullets = this.player.bullets.filter(b => {
+                b.x += b.speed;
+                
+                // Parlak mermi efekti
+                drawRect(b.x, b.y - 1, 10, 3, '#fff');
+                drawRect(b.x + 2, b.y - 2, 6, 5, '#fff');
+                drawRect(b.x + 4, b.y, 4, 1, '#000');
+                
+                return b.x < this.width;
+            });
+            
+            // Seviye ilerlemesi
+            if (!this.bossActive) {
+                this.levelProgress += 0.3;
+                
+                if (this.levelProgress > this.levelLength - 300) {
+                    document.getElementById('bossWarning').style.display = 'block';
+                } else {
+                    document.getElementById('bossWarning').style.display = 'none';
+                }
+                
+                if (this.levelProgress >= this.levelLength) {
+                    this.spawnBoss();
+                }
+                
+                this.enemySpawnTimer--;
+                if (this.enemySpawnTimer <= 0) {
+                    this.spawnEnemy();
+                    this.enemySpawnTimer = Math.max(15, 50 - this.level * 4);
+                }
+            }
+            
+            // Boss
+            if (this.bossActive && this.boss) {
+                this.updateBoss();
+            }
+            
+            // Düşmanlar
+            this.enemies = this.enemies.filter(e => {
+                e.x -= e.speed;
+                e.y += Math.sin(e.x * 0.01 + e.offset) * e.waveAmp;
+                
+                if (e.canShoot && Math.random() < 0.015) {
+                    this.enemyBullets.push({
+                        x: e.x - 8,
+                        y: e.y,
+                        speed: -6,
+                        vx: -6,
+                        vy: 0
+                    });
+                }
+                
+                drawEnemy(e);
+                
+                let hit = false;
+                this.player.bullets = this.player.bullets.filter(b => {
+                    if (Math.abs(b.x - e.x) < e.width && Math.abs(b.y - e.y) < e.height) {
+                        e.health -= b.damage;
+                        if (e.health <= 0) {
+                            hit = true;
+                            this.score += e.points;
+                            createExplosion(e.x, e.y, 10);
+                            
+                            if (Math.random() < 0.2) {
+                                const types = ['health', 'weapon', 'shield'];
+                                this.powerups.push({
+                                    x: e.x,
+                                    y: e.y,
+                                    type: types[Math.floor(Math.random() * types.length)],
+                                    speed: 1.5
+                                });
+                            }
+                        }
+                        return false;
+                    }
+                    return true;
+                });
+                
+                if (this.player.invulnerable <= 0 &&
+                    Math.abs(this.player.x - e.x) < 20 && 
+                    Math.abs(this.player.y - e.y) < 16) {
+                    hit = true;
+                    this.playerHit();
+                }
+                
+                return !hit && e.x > -60;
+            });
+            
+            // Düşman mermileri
+            this.enemyBullets = this.enemyBullets.filter(b => {
+                b.x += b.vx || b.speed;
+                if (b.vy) b.y += b.vy;
+                
+                drawRect(b.x, b.y - 1, 6, 3, '#fff');
+                drawRect(b.x + 1, b.y, 2, 1, '#000');
+                
+                if (this.player.invulnerable <= 0 &&
+                    Math.abs(b.x - this.player.x) < 15 && 
+                    Math.abs(b.y - this.player.y) < 12) {
+                    this.playerHit();
+                    return false;
+                }
+                
+                return b.x > -10;
+            });
+            
+            // Güçlendirmeler
+            this.powerups = this.powerups.filter(p => {
+                p.x -= p.speed;
+                drawPowerup(p);
+                
+                if (Math.abs(p.x - this.player.x) < 20 && 
+                    Math.abs(p.y - this.player.y) < 20) {
+                    
+                    if (p.type === 'health') {
+                        this.lives = Math.min(5, this.lives + 1);
+                        playSound('powerup');
+                    } else if (p.type === 'weapon') {
+                        this.player.powerLevel = Math.min(3, this.player.powerLevel + 1);
+                        playSound('powerup');
+                    } else if (p.type === 'shield') {
+                        this.player.invulnerable = 180;
+                        playSound('powerup');
+                    }
+                    this.updateHUD();
+                    return false;
+                }
+                
+                return p.x > -30;
+            });
+            
+            // Parçacıklar
+            this.particles = this.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.life--;
+                
+                const size = Math.max(1, p.size * (p.life / 50));
+                if (p.type === 'square') {
+                    drawRect(p.x - size/2, p.y - size/2, size, size, '#fff');
+                } else {
+                    drawRect(p.x, p.y, size, size, '#fff');
+                }
+                
+                return p.life > 0;
+            });
+            
+            // Oyuncu
+            drawPlayer();
+            
+            requestAnimationFrame(() => this.loop());
+        };
+        
+        game.spawnEnemy = function() {
+            const types = [
+                {type: 1, width: 16, height: 10, health: 1, speed: 3, points: 100, canShoot: false, waveAmp: 2, offset: 0},
+                {type: 2, width: 20, height: 12, health: 1, speed: 5, points: 200, canShoot: false, waveAmp: 1, offset: 0},
+                {type: 3, width: 24, height: 20, health: 5, speed: 1.5, points: 500, canShoot: true, waveAmp: 0.5, offset: Math.PI},
+                {type: 4, width: 20, height: 18, health: 3, speed: 2.5, points: 400, canShoot: true, waveAmp: 1.5, offset: 0},
+                {type: 5, width: 16, height: 14, health: 2, speed: 4, points: 300, canShoot: false, waveAmp: 3, offset: Math.PI/2}
+            ];
+            
+            const availableTypes = Math.min(types.length, 2 + Math.floor(this.level / 2));
+            const enemyType = types[Math.floor(Math.random() * availableTypes)];
+            
+            this.enemies.push({
+                x: this.width + 30,
+                y: 50 + Math.random() * (this.height - 100),
+                ...enemyType
+            });
+        };
+        
+        game.spawnBoss = function() {
+            this.bossActive = true;
+            this.boss = {
+                x: this.width + 80,
+                y: this.height / 2,
+                targetY: this.height / 2,
+                width: 80,
+                height: 60,
+                health: 30 + this.level * 15,
+                maxHealth: 30 + this.level * 15,
+                shootTimer: 0,
+                phase: 0
+            };
+        };
+        
+        game.updateBoss = function() {
+            const b = this.boss;
+            
+            b.x = Math.max(this.width / 2, b.x - 0.3);
+            b.y += (b.targetY - b.y) * 0.015;
+            
+            if (Math.random() < 0.02) {
+                b.targetY = 80 + Math.random() * (this.height - 160);
+            }
+            
+            b.shootTimer--;
+            if (b.shootTimer <= 0 && b.x < this.width - 150) {
+                const patterns = [
+                    // 3'lü ateş
+                    () => {
+                        this.enemyBullets.push({x: b.x - 40, y: b.y, vx: -7, vy: 0});
+                        this.enemyBullets.push({x: b.x - 40, y: b.y - 15, vx: -6, vy: -2});
+                        this.enemyBullets.push({x: b.x - 40, y: b.y + 15, vx: -6, vy: 2});
+                    },
+                    // Dairesel ateş
+                    () => {
+                        for (let i = 0; i < 6; i++) {
+                            const angle = (Math.PI * i) / 3;
+                            this.enemyBullets.push({
+                                x: b.x,
+                                y: b.y,
+                                vx: Math.cos(angle) * 5,
+                                vy: Math.sin(angle) * 5
+                            });
+                        }
+                    },
+                    // Hedefli ateş
+                    () => {
+                        const dx = this.player.x - b.x;
+                        const dy = this.player.y - b.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        this.enemyBullets.push({
+
+
