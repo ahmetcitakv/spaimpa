@@ -977,5 +977,128 @@
                         const dy = this.player.y - b.y;
                         const dist = Math.sqrt(dx*dx + dy*dy);
                         this.enemyBullets.push({
-
-
+                            x: b.x - 40,
+                            y: b.y,
+                            vx: (dx/dist) * 6,
+                            vy: (dy/dist) * 6
+                        });
+                    }
+                ];
+                
+                patterns[Math.floor(Math.random() * patterns.length)]();
+                b.shootTimer = Math.max(30, 60 - this.level * 3);
+            }
+            
+            this.player.bullets = this.player.bullets.filter(bullet => {
+                if (Math.abs(bullet.x - b.x) < 35 && 
+                    Math.abs(bullet.y - b.y) < 30) {
+                    b.health--;
+                    // Çekirdek vurulduğunda ekstra hasar
+                    if (Math.abs(bullet.x - b.x) < 10 && Math.abs(bullet.y - b.y) < 10) {
+                        b.health--;
+                    }
+                    if (b.health <= 0) {
+                        this.bossDefeated();
+                    }
+                    return false;
+                }
+                return true;
+            });
+            
+            if (this.player.invulnerable <= 0 &&
+                Math.abs(this.player.x - b.x) < 50 && 
+                Math.abs(this.player.y - b.y) < 40) {
+                this.playerHit();
+            }
+            
+            drawBoss();
+        };
+        
+        game.bossDefeated = function() {
+            createExplosion(this.boss.x, this.boss.y, 50);
+            this.bossActive = false;
+            this.boss = null;
+            this.score += 2000 * this.level;
+            document.getElementById('bossWarning').style.display = 'none';
+            
+            setTimeout(() => {
+                this.level++;
+                this.resetLevel();
+                this.updateHUD();
+            }, 3000);
+        };
+        
+        game.playerHit = function() {
+            this.lives--;
+            createExplosion(this.player.x, this.player.y, 20);
+            playSound('hit');
+            this.updateHUD();
+            
+            this.player.x = 60;
+            this.player.y = this.height / 2;
+            this.player.invulnerable = 120;
+            this.player.powerLevel = Math.max(1, this.player.powerLevel - 1);
+            
+            if (this.lives <= 0) {
+                this.gameOver();
+            }
+        };
+        
+        // Kontroller
+        const moveBtn = document.getElementById('moveBtn');
+        const fireBtn = document.getElementById('fireBtn');
+        
+        moveBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            game.moveActive = true;
+            const touch = e.touches[0];
+            const rect = moveBtn.getBoundingClientRect();
+            game.moveY = touch.clientY < rect.top + rect.height/2 ? -1 : 1;
+        });
+        
+        moveBtn.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = moveBtn.getBoundingClientRect();
+            game.moveY = touch.clientY < rect.top + rect.height/2 ? -1 : 1;
+        });
+        
+        moveBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            game.moveActive = false;
+        });
+        
+        fireBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            game.fireActive = true;
+        });
+        
+        fireBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            game.fireActive = false;
+        });
+        
+        // Mouse desteği
+        moveBtn.addEventListener('mousedown', (e) => {
+            game.moveActive = true;
+            const rect = moveBtn.getBoundingClientRect();
+            game.moveY = e.clientY < rect.top + rect.height/2 ? -1 : 1;
+        });
+        
+        moveBtn.addEventListener('mousemove', (e) => {
+            if (game.moveActive) {
+                const rect = moveBtn.getBoundingClientRect();
+                game.moveY = e.clientY < rect.top + rect.height/2 ? -1 : 1;
+            }
+        });
+        
+        moveBtn.addEventListener('mouseup', () => game.moveActive = false);
+        moveBtn.addEventListener('mouseleave', () => game.moveActive = false);
+        
+        fireBtn.addEventListener('mousedown', () => game.fireActive = true);
+        fireBtn.addEventListener('mouseup', () => game.fireActive = false);
+        
+        initStars();
+    </script>
+</body>
+</html>
