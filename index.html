@@ -51,6 +51,7 @@
             align-items: center;
             background: #000;
             pointer-events: auto;
+            text-align: center;
         }
         
         .hidden {
@@ -65,6 +66,8 @@
             margin-bottom: 40px;
             text-shadow: 0 0 30px #fff, 0 0 60px rgba(255,255,255,0.5);
             animation: pulse 2s infinite;
+            width: 100%;
+            text-align: center;
         }
         
         @keyframes pulse {
@@ -95,6 +98,15 @@
             transform: scale(1.05);
         }
         
+        .result-text {
+            color: #fff;
+            font-size: 18px;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            width: 100%;
+            text-align: center;
+        }
+        
         #hud {
             position: absolute;
             top: 20px;
@@ -120,7 +132,6 @@
             pointer-events: auto;
         }
         
-        /* ANALOG JOYSTICK */
         .joystick-area {
             width: 140px;
             height: 140px;
@@ -160,7 +171,6 @@
             box-shadow: 0 0 30px rgba(255,255,255,0.9);
         }
         
-        /* ATEŞ BUTONU */
         .fire-area {
             width: 120px;
             height: 120px;
@@ -240,6 +250,8 @@
             animation: blink 0.4s infinite;
             display: none;
             text-shadow: 0 0 30px #fff;
+            text-align: center;
+            width: 100%;
         }
         
         @keyframes blink {
@@ -272,6 +284,7 @@
             pointer-events: none;
         }
     </style>
+<base target="_blank">
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
@@ -279,23 +292,20 @@
     <div class="vignette"></div>
     
     <div id="ui">
-        <!-- Ana Menü -->
         <div id="menuScreen" class="screen">
             <h1>◆ COSMO RANGER ◆</h1>
             <button class="btn" onclick="game.start()">BAŞLA</button>
         </div>
         
-        <!-- Oyun Bitti -->
         <div id="gameOverScreen" class="screen hidden">
             <h1>MISSION FAILED</h1>
-            <div style="color: #fff; font-size: 18px; letter-spacing: 3px; margin-bottom: 30px;">
+            <div class="result-text">
                 SKOR: <span id="finalScore">0</span> | SEVİYE: <span id="finalLevel">1</span>
             </div>
             <button class="btn" onclick="game.restart()">TEKRAR DENE</button>
             <button class="btn" onclick="game.showMenu()">MENÜ</button>
         </div>
         
-        <!-- HUD -->
         <div id="hud" class="hidden">
             <span>SKOR: <span id="score">0</span></span>
             <span>♥ <span id="lives">3</span></span>
@@ -304,7 +314,6 @@
         
         <div id="bossWarning">⚠ BOSS ALERT ⚠</div>
         
-        <!-- Kontroller -->
         <div id="controls" class="hidden">
             <div class="joystick-area" id="joystick">
                 <div class="joystick-base"></div>
@@ -337,14 +346,13 @@
                 vy: 0,
                 width: 24,
                 height: 16,
-                speed: 8,
-                maxSpeed: 12,
-                friction: 0.85,
+                speed: 0.8,
+                maxSpeed: 6,
+                friction: 0.92,
                 bullets: [],
                 shootTimer: 0,
                 powerLevel: 1,
-                invulnerable: 0,
-                tilt: 0
+                invulnerable: 0
             },
             
             enemies: [],
@@ -444,7 +452,6 @@
             ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
         }
         
-        // GELİŞMİŞ OYUNCU GEMİSİ - HIZLI TEPKİLİ
         function drawPlayer() {
             const p = game.player;
             const x = Math.floor(p.x);
@@ -452,26 +459,22 @@
             
             if (p.invulnerable > 0 && Math.floor(Date.now() / 30) % 2 === 0) return;
             
-            // Eğim (tilt) hesaplama
-            const tilt = Math.max(-15, Math.min(15, p.vy * 2));
+            const tilt = Math.max(-12, Math.min(12, p.vy * 1.5));
             const tiltRad = tilt * Math.PI / 180;
             
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(tiltRad);
             
-            // Ana gövde
             drawRect(-10, -8, 28, 16, '#fff');
             drawRect(-8, -6, 24, 12, '#000');
             drawRect(-6, -4, 20, 8, '#fff');
             
-            // Burun
             drawRect(12, -6, 10, 12, '#fff');
             drawRect(14, -4, 6, 8, '#000');
             drawRect(16, -2, 4, 4, '#fff');
             
-            // Kanatlar (eğime göre hareketli)
-            const wingOffset = Math.abs(tilt) * 0.3;
+            const wingOffset = Math.abs(tilt) * 0.2;
             drawRect(-6, -14 - wingOffset, 16, 6, '#fff');
             drawRect(-4, -16 - wingOffset, 12, 2, '#fff');
             drawRect(-2, -12 - wingOffset, 8, 2, '#000');
@@ -480,18 +483,15 @@
             drawRect(-4, 14 + wingOffset, 12, 2, '#fff');
             drawRect(-2, 10 + wingOffset, 8, 2, '#000');
             
-            // Motorlar
             drawRect(-14, -6, 6, 4, '#fff');
             drawRect(-14, 2, 6, 4, '#fff');
             
-            // Alev efekti (hıza göre)
-            const flameLength = 8 + Math.abs(p.vx) * 0.5 + Math.random() * 6;
+            const flameLength = 6 + Math.abs(p.vx) * 0.3 + Math.random() * 4;
             drawRect(-16 - flameLength, -5, flameLength, 2, '#fff');
             drawRect(-16 - flameLength, 3, flameLength, 2, '#fff');
             drawRect(-14 - flameLength * 0.7, -4, flameLength * 0.5, 1, '#aaa');
             drawRect(-14 - flameLength * 0.7, 4, flameLength * 0.5, 1, '#aaa');
             
-            // Silahlar
             if (p.powerLevel >= 2) {
                 drawRect(0, -18, 6, 4, '#fff');
                 drawRect(0, 14, 6, 4, '#fff');
@@ -504,7 +504,6 @@
             ctx.restore();
         }
         
-        // DETAYLI DÜŞMANLAR
         function drawEnemy(enemy) {
             const x = Math.floor(enemy.x);
             const y = Math.floor(enemy.y);
@@ -576,21 +575,17 @@
             const y = Math.floor(b.y);
             const pulse = Math.sin(Date.now() / 300) * 3;
             
-            // Ana gövde
             drawRect(x - 50, y - 40, 100, 80, '#fff');
             drawRect(x - 46, y - 36, 92, 72, '#000');
             
-            // Üst kule
             drawRect(x - 25, y - 60, 50, 20, '#fff');
             drawRect(x - 21, y - 56, 42, 14, '#000');
             drawRect(x - 12, y - 65, 24, 8, '#fff');
             
-            // Alt kule
             drawRect(x - 25, y + 40, 50, 20, '#fff');
             drawRect(x - 21, y + 42, 42, 14, '#000');
             drawRect(x - 12, y + 57, 24, 8, '#fff');
             
-            // Yan kuleler
             drawRect(x - 70, y - 25, 20, 50, '#fff');
             drawRect(x - 66, y - 21, 14, 42, '#000');
             drawRect(x - 78, y - 12, 8, 24, '#fff');
@@ -599,20 +594,17 @@
             drawRect(x + 52, y - 21, 14, 42, '#000');
             drawRect(x + 70, y - 12, 8, 24, '#fff');
             
-            // Çekirdek (pulsating)
             drawRect(x - 15 + pulse, y - 15 + pulse, 30 - pulse*2, 30 - pulse*2, '#fff');
             drawRect(x - 10, y - 10, 20, 20, '#000');
             drawRect(x - 6, y - 6, 12, 12, '#fff');
             drawRect(x - 3, y - 3, 6, 6, '#000');
             
-            // Motorlar
             const flame = (Math.floor(Date.now() / 40) % 5) * 2;
             for (let i = 0; i < 3; i++) {
                 const my = y - 20 + i * 20;
                 drawRect(x + 60 + flame, my - 4, 8 + flame, 8, '#fff');
             }
             
-            // Can barı
             const barWidth = 120;
             const healthPercent = b.health / b.maxHealth;
             drawRect(x - 60, y - 75, barWidth, 10, '#000');
@@ -625,7 +617,6 @@
             const bounce = Math.sin(Date.now() / 100) * 4;
             const rotate = Date.now() / 200;
             
-            // Dönen halka
             for (let i = 0; i < 12; i++) {
                 const angle = rotate + i * Math.PI / 6;
                 const r = 12;
@@ -634,7 +625,6 @@
                 drawRect(px - 2, py - 2, 4, 4, '#fff');
             }
             
-            // İç kutu
             drawRect(x - 10, y - 10 + bounce, 20, 20, '#fff');
             drawRect(x - 8, y - 8 + bounce, 16, 16, '#000');
             
@@ -653,9 +643,7 @@
             }
         }
         
-        // ZENGİNLEŞTİRİLMİŞ PATLAMA EFEKTİ
         function createExplosion(x, y, size) {
-            // Parçacıklar
             for (let i = 0; i < size * 3; i++) {
                 const angle = (Math.PI * 2 * i) / (size * 3) + Math.random() * 0.5;
                 const speed = 3 + Math.random() * 8;
@@ -671,7 +659,6 @@
                 });
             }
             
-            // Shockwave
             game.shockwaves.push({
                 x: x,
                 y: y,
@@ -684,7 +671,6 @@
             playSound('explosion');
         }
         
-        // JOYSTICK KONTROLÜ
         const joystick = document.getElementById('joystick');
         const joystickKnob = document.getElementById('joystickKnob');
         const fireBtn = document.getElementById('fireBtn');
@@ -734,7 +720,6 @@
             joystickKnob.classList.remove('active');
         });
         
-        // Mouse desteği
         joystick.addEventListener('mousedown', (e) => {
             game.joystick.active = true;
             updateJoystick(e);
@@ -756,7 +741,6 @@
             }
         });
         
-        // Ateş butonu
         fireBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             game.fireActive = true;
@@ -770,7 +754,6 @@
         fireBtn.addEventListener('mousedown', () => game.fireActive = true);
         fireBtn.addEventListener('mouseup', () => game.fireActive = false);
         
-        // OYUN FONKSİYONLARI
         game.start = function() {
             document.getElementById('menuScreen').classList.add('hidden');
             document.getElementById('hud').classList.remove('hidden');
@@ -833,14 +816,12 @@
             document.getElementById('level').textContent = this.level;
         };
         
-        // ANA OYUN DÖNGÜSÜ
         game.loop = function() {
             if (this.state !== 'playing') return;
             
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, this.width, this.height);
             
-            // Yıldızlar (parlaklık animasyonu)
             this.stars.forEach(star => {
                 star.x -= star.speed;
                 if (star.x < 0) {
@@ -853,14 +834,15 @@
                 ctx.fillRect(star.x, star.y, star.size, star.size);
             });
             
-            // JOYSTICK HAREKETİ - HIZLI TEPKİ
+            // SOFT HAREKET - Yumuşak ivme
             const p = this.player;
             if (this.joystick.active) {
-                p.vx += this.joystick.dx * 2;
-                p.vy += this.joystick.dy * 2;
+                // Yumuşak ivme ekleme
+                p.vx += this.joystick.dx * p.speed;
+                p.vy += this.joystick.dy * p.speed;
             }
             
-            // Sürükleme (friction)
+            // Yumuşak sürtünme
             p.vx *= p.friction;
             p.vy *= p.friction;
             
@@ -875,11 +857,11 @@
             p.x += p.vx;
             p.y += p.vy;
             
-            // Sınır kontrolü
+            // Sınır kontrolü - %10 marjinal alanlar hariç
+            const margin = this.height * 0.1;
             p.x = Math.max(30, Math.min(this.width - 50, p.x));
-            p.y = Math.max(30, Math.min(this.height - 30, p.y));
+            p.y = Math.max(margin + 20, Math.min(this.height - margin - 20, p.y));
             
-            // Ateş
             if (this.fireActive && p.shootTimer <= 0) {
                 p.bullets.push({x: p.x + 20, y: p.y, speed: 12, damage: 1});
                 if (p.powerLevel >= 2) {
@@ -896,10 +878,8 @@
             if (p.shootTimer > 0) p.shootTimer--;
             if (p.invulnerable > 0) p.invulnerable--;
             
-            // Mermiler (parlak)
             p.bullets = p.bullets.filter(b => {
                 b.x += b.speed;
-                // Glow efekti
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = '#fff';
                 drawRect(b.x, b.y - 1, 12, 3, '#fff');
@@ -908,7 +888,6 @@
                 return b.x < this.width;
             });
             
-            // Seviye ilerlemesi
             if (!this.bossActive) {
                 this.levelProgress += 0.3;
                 
@@ -929,12 +908,10 @@
                 }
             }
             
-            // Boss
             if (this.bossActive && this.boss) {
                 this.updateBoss();
             }
             
-            // Düşmanlar
             this.enemies = this.enemies.filter(e => {
                 e.x -= e.speed;
                 e.y += Math.sin(e.x * 0.01 + e.offset) * e.waveAmp;
@@ -984,7 +961,6 @@
                 return !hit && e.x > -60;
             });
             
-            // Düşman mermileri
             this.enemyBullets = this.enemyBullets.filter(b => {
                 b.x += b.vx;
                 b.y += b.vy;
@@ -1001,7 +977,6 @@
                 return b.x > -10;
             });
             
-            // Güçlendirmeler
             this.powerups = this.powerups.filter(pu => {
                 pu.x -= pu.speed;
                 drawPowerup(pu);
@@ -1026,7 +1001,6 @@
                 return pu.x > -30;
             });
             
-            // Shockwave'ler
             this.shockwaves = this.shockwaves.filter(s => {
                 s.radius += 4;
                 s.life--;
@@ -1041,7 +1015,6 @@
                 return s.life > 0 && s.radius < s.maxRadius;
             });
             
-            // Parçacıklar (animasyonlu)
             this.particles = this.particles.filter(pt => {
                 pt.x += pt.vx;
                 pt.y += pt.vy;
@@ -1062,7 +1035,6 @@
                 return pt.life > 0 && pt.size > 0.5;
             });
             
-            // Oyuncu
             drawPlayer();
             
             requestAnimationFrame(() => this.loop());
@@ -1080,9 +1052,13 @@
             const availableTypes = Math.min(types.length, 2 + Math.floor(this.level / 2));
             const enemyType = types[Math.floor(Math.random() * availableTypes)];
             
+            // %10 marjinal alanlar hariç spawn
+            const margin = this.height * 0.1;
+            const spawnY = margin + 40 + Math.random() * (this.height - margin * 2 - 80);
+            
             this.enemies.push({
                 x: this.width + 40,
-                y: 60 + Math.random() * (this.height - 120),
+                y: spawnY,
                 ...enemyType
             });
         };
@@ -1108,7 +1084,8 @@
             b.y += (b.targetY - b.y) * 0.02;
             
             if (Math.random() < 0.03) {
-                b.targetY = 100 + Math.random() * (this.height - 200);
+                const margin = this.height * 0.15;
+                b.targetY = margin + Math.random() * (this.height - margin * 2);
             }
             
             b.shootTimer--;
